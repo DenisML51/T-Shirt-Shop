@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Заказ {{ order.order_code }}</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 1rem;
+      }
+      td, th {
+        border: 1px solid #000;
+        padding: 8px;
+      }
+      .header {
+        margin-bottom: 20px;
+      }
+    </style>
+</head>
+<body>
+    <div class="header">
+      <h1>Заказ №{{ order.order_code }}</h1>
+      <p><strong>Дата заказа:</strong> {{ order.created_at }}</p>
+      <p><strong>ФИО:</strong> {{ order.customer_name }}</p>
+      <p><strong>Телефон:</strong> {{ order.phone }}</p>
+      <p><strong>Адрес доставки:</strong> {{ order.address }}</p>
+      <p><strong>E-mail:</strong> {{ order.email }}</p>
+    </div>
+
+    <h2>Состав заказа</h2>
+    <table>
+        <tr>
+            <th>Модель</th>
+            <th>Цвет</th>
+            <th>Размер</th>
+            <th>Принт</th>
+            <th>Кол-во</th>
+            <th>Цена (шт)</th>
+        </tr>
+        {% for item in order.items %}
+        <tr>
+            <td>{{ item.combination.model.name }}</td>
+            <td>{{ item.combination.color.name }}</td>
+            <td>{{ item.combination.size.name }}</td>
+            <td>
+                {% if item.print_id %}
+                    {{ item.print_obj.name }}
+                {% else %}
+                    Без принта
+                {% endif %}
+            </td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.price }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

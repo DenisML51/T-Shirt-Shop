@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h1 class="mb-4">Каталог футболок</h1>
+  
+  <div class="row">
+    <div class="col-md-6">
+      <div class="tshirt-container position-relative mb-3 " style="width:300px;">
+        <img id="tshirtBase" src="" alt="T-shirt Base" style="width:100%;">
+        <img id="tshirtPrint" class="print-overlay" src="" alt="Print Overlay" style="display: none; position: sticky; right: 0; bottom: 0; top: 0; left: 0; max-width:100px; max-height:100px;">
+    </div>
+    </div>
+    
+    <div class="col-md-6">
+      <form method="POST" action="{{ url_for('catalog.add_to_cart') }}" id="cartForm" class="p-3 border rounded bg-white">
+        <div class="mb-3">
+          <label for="model_id" class="form-label">Модель:</label>
+          <select name="model_id" id="model_id" class="form-select">
+            {% for m in tshirt_models %}
+              <option value="{{ m.id }}">{{ m.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="color_id" class="form-label">Цвет:</label>
+          <select name="color_id" id="color_id" class="form-select">
+            {% for c in colors %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="size_id" class="form-label">Размер:</label>
+          <select name="size_id" id="size_id" class="form-select">
+            {% for s in sizes %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="print_id" class="form-label">Принт:</label>
+          <select name="print_id" id="print_id" class="form-select">
+            <option value="0">Без принта</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="quantity" class="form-label">
+            Количество: <span id="stockDisplay" class="text-muted"></span>
+          </label>
+          <input type="number" name="quantity" id="quantity" value="1" min="1" class="form-control">
+          <div id="quantityFeedback" class="invalid-feedback">
+            Введённое количество превышает доступное!
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Добавить в корзину</button>
+      </form>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-12">
+      <div id="printEditControls" class="d-flex align-items-center justify-content-center mt-3" style="display: none;">
+        <button id="editPrintBtn" class="btn btn-secondary btn-sm me-3">Редактировать принт</button>
+        <div class="me-3">
+          <label for="printScale" class="form-label mb-0">Масштаб:</label>
+          <input type="range" id="printScale" min="0.5" max="2" step="0.1" value="1" class="form-range" style="width:150px;">
+        </div>
+        <div>
+          <label for="printRotation" class="form-label mb-0">Угол (°):</label>
+          <input type="range" id="printRotation" min="-180" max="180" step="1" value="0" class="form-range" style="width:150px;">
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <hr class="my-4">
+  <h2 class="mb-3">Корзина</h2>
+  {% if cart %}
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped align-middle" id="cartTable">
+      <thead>
+        <tr>
+          <th>Модель</th>
+          <th>Цвет</th>
+          <th>Размер</th>
+          <th>Принт</th>
+          <th>Кол-во</th>
+          <th>Цена (шт.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in cart %}
+        <tr data-available-stock="{{ item.availableStock }}">
+          <td>{{ item.model_name }}</td>
+          <td>{{ item.color_name }}</td>
+          <td>{{ item.size_name }}</td>
+          <td>{{ item.print_name if item.print_name else "Без принта" }}</td>
+          <td class="quantity-cell">
+            {{ item.quantity }}
+            <button class="btn btn-sm btn-outline-danger ms-2 remove-item" data-combination-id="{{ item.combination_id }}" data-print-id="{{ item.print_id or 0 }}">–</button>
+          </td>
+          <td>{{ item.price }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <a href="{{ url_for('order.order') }}" id="checkoutButton" class="btn btn-success">Перейти к оформлению заказа</a>
+  {% else %}
+    <p>Ваша корзина пуста.</p>
+  {% endif %}
+</div>
+
+<script>
+let availableStock = 0;
+let editMode = false;
+let offsetX = 0, offsetY = 0;
+
+const tshirtContainer = document.querySelector('.tshirt-container');
+const tshirtPrint = document.getElementById('tshirtPrint');
+const editPrintBtn = document.getElementById('editPrintBtn');
+const printScaleSlider = document.getElementById('printScale');
+const printRotationSlider = document.getElementById('printRotation');
+const printEditControls = document.getElementById('printEditControls');
+
+const modelSelect = document.getElementById('model_id');
+const colorSelect = document.getElementById('color_id');
+const sizeSelect = document.getElementById('size_id');
+const printSelect = document.getElementById('print_id');
+const quantityInput = document.getElementById('quantity');
+const stockDisplay = document.getElementById('stockDisplay');
+const checkoutButton = document.getElementById('checkoutButton');
+
+function loadCompatiblePrints() {
+  const formData = new FormData();
+  formData.append('model_id', modelSelect.value);
+  formData.append('color_id', colorSelect.value);
+  formData.append('size_id', sizeSelect.value);
+  
+  fetch('{{ url_for("catalog.get_prints") }}', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    while (printSelect.options.length > 1) {
+      printSelect.remove(1);
+    }
+    data.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.print_id;
+      opt.textContent = p.print_name;
+      opt.setAttribute('data-print-img', p.print_image);
+      printSelect.appendChild(opt);
+    });
+    updateImages();
+  })
+  .catch(err => console.error(err));
+}
+
+function loadStock() {
+  const formData = new FormData();
+  formData.append('model_id', modelSelect.value);
+  formData.append('color_id', colorSelect.value);
+  formData.append('size_id', sizeSelect.value);
+  
+  fetch('{{ url_for("catalog.get_stock") }}', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    availableStock = data.stock;
+    stockDisplay.textContent = `(В наличии: ${availableStock})`;
+    validateQuantity();
+  })
+  .catch(err => console.error(err));
+}
+
+function updateImages() {
+  let modelName = modelSelect.options[modelSelect.selectedIndex].textContent.toLowerCase().replace(/\s+/g, '_');
+  let colorName = colorSelect.options[colorSelect.selectedIndex].textContent.toLowerCase();
+  let baseImage = `static/images/${modelName}_${colorName}.png`;
+  document.getElementById('tshirtBase').src = baseImage;
+  
+  if (parseInt(printSelect.value) === 0) {
+    tshirtPrint.style.display = 'none';
+    printEditControls.style.display = 'none';
+  } else {
+    const selectedOpt = printSelect.options[printSelect.selectedIndex];
+    let printImg = selectedOpt.getAttribute('data-print-img') || '';
+    tshirtPrint.src = printImg;
+    tshirtPrint.style.display = 'block';
+    printEditControls.style.display = 'flex';
+    printScaleSlider.value = 1;
+    printRotationSlider.value = 0;
+    tshirtPrint.style.left = '0px';
+    tshirtPrint.style.top = '0px';
+    updatePrintTransform();
+  }
+}
+
+function updatePrintTransform() {
+  let scale = parseFloat(printScaleSlider.value);
+  let rotation = parseFloat(printRotationSlider.value);
+  tshirtPrint.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+}
+
+function validateQuantity() {
+  let qty = parseInt(quantityInput.value) || 0;
+  if (qty > availableStock) {
+    quantityInput.classList.add('is-invalid');
+  } else {
+    quantityInput.classList.remove('is-invalid');
+  }
+}
+
+function checkCartQuantities() {
+  let disableCheckout = false;
+  const rows = document.querySelectorAll("#cartTable tbody tr");
+  rows.forEach(row => {
+    const available = parseInt(row.dataset.availableStock);
+    const qtyCell = row.querySelector(".quantity-cell");
+    const qty = parseInt(qtyCell.textContent);
+    if (qty > available) {
+      qtyCell.classList.add("text-danger");
+      disableCheckout = true;
+    } else {
+      qtyCell.classList.remove("text-danger");
+    }
+  });
+  if (checkoutButton) {
+    if (disableCheckout) {
+      checkoutButton.classList.add("disabled");
+      checkoutButton.setAttribute("aria-disabled", "true");
+      checkoutButton.href = "#";
+    } else {
+      checkoutButton.classList.remove("disabled");
+      checkoutButton.removeAttribute("aria-disabled");
+      checkoutButton.href = "{{ url_for('order.order') }}";
+    }
+  }
+}
+
+modelSelect.addEventListener('change', () => {
+  loadCompatiblePrints();
+  loadStock();
+});
+colorSelect.addEventListener('change', () => {
+  loadCompatiblePrints();
+  loadStock();
+});
+sizeSelect.addEventListener('change', () => {
+  loadCompatiblePrints();
+  loadStock();
+});
+printSelect.addEventListener('change', updateImages);
+quantityInput.addEventListener('input', validateQuantity);
+printScaleSlider.addEventListener('input', updatePrintTransform);
+printRotationSlider.addEventListener('input', updatePrintTransform);
+
+window.addEventListener('load', () => {
+  loadCompatiblePrints();
+  loadStock();
+  checkCartQuantities();
+});
+
+function toggleEditMode() {
+  editMode = !editMode;
+  if (editMode) {
+    tshirtPrint.style.border = '2px dashed red';
+    tshirtPrint.style.cursor = 'move';
+  } else {
+    tshirtPrint.style.border = 'none';
+    tshirtPrint.style.cursor = 'default';
+  }
+}
+
+editPrintBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  toggleEditMode();
+});
+
+let isDragging = false;
+tshirtPrint.addEventListener('mousedown', (e) => {
+  if (!editMode) return;
+  isDragging = true;
+  const rect = tshirtPrint.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDragging && editMode) {
+    const containerRect = tshirtContainer.getBoundingClientRect();
+    let left = e.clientX - containerRect.left - offsetX;
+    let top = e.clientY - containerRect.top - offsetY;
+    left = Math.max(0, Math.min(left, containerRect.width - tshirtPrint.offsetWidth));
+    top = Math.max(0, Math.min(top, containerRect.height - tshirtPrint.offsetHeight));
+    tshirtPrint.style.position = 'absolute';
+    tshirtPrint.style.left = left + 'px';
+    tshirtPrint.style.top = top + 'px';
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+document.querySelectorAll('.remove-item').forEach(btn => {
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    const combinationId = this.getAttribute('data-combination-id');
+    const printId = this.getAttribute('data-print-id');
+    fetch('{{ url_for("catalog.remove_from_cart") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `combination_id=${combinationId}&print_id=${printId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+      location.reload();
+    })
+    .catch(err => console.error(err));
+  });
+});
+
+checkCartQuantities();
+</script>
+{% endblock %}
