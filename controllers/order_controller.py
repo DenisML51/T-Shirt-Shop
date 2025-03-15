@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, session, make_response
+from flask import Blueprint, render_template, request, session, make_response, redirect, url_for, flash
 from models.db import db
 from models.models import TShirtCombination, Order, OrderItem
 import uuid
@@ -9,8 +9,10 @@ order_bp = Blueprint('order', __name__)
 @order_bp.route('/order', methods=['GET', 'POST'])
 def order():
     if request.method == 'POST':
+        # Ограничение на количество заказов (например, 200)
         if Order.query.count() >= 200:
-            return "Лимит заказов (2) исчерпан.", 403
+            flash("Лимит заказов (200) исчерпан.", "danger")
+            return redirect(url_for('catalog.catalog'))
 
         customer_name = request.form.get('customer_name')
         phone = request.form.get('phone')
@@ -57,6 +59,7 @@ def order():
         session['cart'] = []
         session.modified = True
 
+        flash("Заказ оформлен! Скачайте квитанцию.", "success")
         rendered_html = render_template('order_pdf.html', order=new_order)
         config_pdf = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
         pdf = pdfkit.from_string(rendered_html, False, configuration=config_pdf)

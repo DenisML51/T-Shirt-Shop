@@ -4,13 +4,16 @@
   <h1 class="mb-4">Каталог футболок</h1>
   
   <div class="row">
+    <!-- Превью футболки с принтом -->
     <div class="col-md-6">
-      <div class="tshirt-container position-relative mb-3 " style="width:300px;">
-        <img id="tshirtBase" src="" alt="T-shirt Base" style="width:100%;">
-        <img id="tshirtPrint" class="print-overlay" src="" alt="Print Overlay" style="display: none; position: sticky; right: 0; bottom: 0; top: 0; left: 0; max-width:100px; max-height:100px;">
-    </div>
+      <div class="tshirt-container position-relative mb-3" style="width:300px; height:400px; border:0px solid #ddd; overflow:hidden;">
+        <img id="tshirtBase" src="" alt="T-shirt Base" style="width:100%; height:100%; object-fit:contain;">
+        <img id="tshirtPrint" class="print-overlay" src="" alt="Print Overlay" style="display: none; position: absolute; top: 0; left: 0; max-width:150px; max-height:150px;">
+      </div>
+      <button id="toggleEditBtn" class="btn btn-secondary btn-sm">Редактировать принт</button>
     </div>
     
+    <!-- Форма выбора и добавления в корзину -->
     <div class="col-md-6">
       <form method="POST" action="{{ url_for('catalog.add_to_cart') }}" id="cartForm" class="p-3 border rounded bg-white">
         <div class="mb-3">
@@ -52,23 +55,33 @@
             Введённое количество превышает доступное!
           </div>
         </div>
+        <!-- Скрытые поля для параметров принта -->
+        <input type="hidden" name="print_scale" id="hiddenPrintScale" value="1">
+        <input type="hidden" name="print_rotation" id="hiddenPrintRotation" value="0">
+        <input type="hidden" name="print_offset_x" id="hiddenPrintOffsetX" value="0">
+        <input type="hidden" name="print_offset_y" id="hiddenPrintOffsetY" value="0">
+        
         <button type="submit" class="btn btn-primary">Добавить в корзину</button>
       </form>
     </div>
   </div>
   
-  <div class="row">
-    <div class="col-12">
-      <div id="printEditControls" class="d-flex align-items-center justify-content-center mt-3" style="display: none;">
-        <button id="editPrintBtn" class="btn btn-secondary btn-sm me-3">Редактировать принт</button>
-        <div class="me-3">
-          <label for="printScale" class="form-label mb-0">Масштаб:</label>
-          <input type="range" id="printScale" min="0.5" max="2" step="0.1" value="1" class="form-range" style="width:150px;">
-        </div>
-        <div>
-          <label for="printRotation" class="form-label mb-0">Угол (°):</label>
-          <input type="range" id="printRotation" min="-180" max="180" step="1" value="0" class="form-range" style="width:150px;">
-        </div>
+  <!-- Панель редактирования принта -->
+  <div id="printEditCard" class="card mt-3" style="display: none;">
+    <div class="card-header">
+      Редактирование принта
+    </div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label for="printScale" class="form-label">Масштаб: <span id="printScaleVal">1</span></label>
+        <input type="range" id="printScale" min="0.5" max="2" step="0.1" value="1" class="form-range">
+      </div>
+      <div class="mb-3">
+        <label for="printRotation" class="form-label">Угол (°): <span id="printRotationVal">0</span></label>
+        <input type="range" id="printRotation" min="-180" max="180" step="1" value="0" class="form-range">
+      </div>
+      <div class="mb-3">
+        <button id="resetPositionBtn" class="btn btn-outline-secondary btn-sm">Сбросить позицию</button>
       </div>
     </div>
   </div>
@@ -108,19 +121,23 @@
   {% else %}
     <p>Ваша корзина пуста.</p>
   {% endif %}
+  </div>
 </div>
 
 <script>
 let availableStock = 0;
 let editMode = false;
-let offsetX = 0, offsetY = 0;
+let dragOffsetX = 0, dragOffsetY = 0;
 
 const tshirtContainer = document.querySelector('.tshirt-container');
 const tshirtPrint = document.getElementById('tshirtPrint');
-const editPrintBtn = document.getElementById('editPrintBtn');
+const toggleEditBtn = document.getElementById('toggleEditBtn');
+const printEditCard = document.getElementById('printEditCard');
 const printScaleSlider = document.getElementById('printScale');
 const printRotationSlider = document.getElementById('printRotation');
-const printEditControls = document.getElementById('printEditControls');
+const printScaleVal = document.getElementById('printScaleVal');
+const printRotationVal = document.getElementById('printRotationVal');
+const resetPositionBtn = document.getElementById('resetPositionBtn');
 
 const modelSelect = document.getElementById('model_id');
 const colorSelect = document.getElementById('color_id');
@@ -129,6 +146,12 @@ const printSelect = document.getElementById('print_id');
 const quantityInput = document.getElementById('quantity');
 const stockDisplay = document.getElementById('stockDisplay');
 const checkoutButton = document.getElementById('checkoutButton');
+
+const cartForm = document.getElementById('cartForm');
+const hiddenPrintScale = document.getElementById('hiddenPrintScale');
+const hiddenPrintRotation = document.getElementById('hiddenPrintRotation');
+const hiddenPrintOffsetX = document.getElementById('hiddenPrintOffsetX');
+const hiddenPrintOffsetY = document.getElementById('hiddenPrintOffsetY');
 
 function loadCompatiblePrints() {
   const formData = new FormData();
@@ -184,18 +207,12 @@ function updateImages() {
   
   if (parseInt(printSelect.value) === 0) {
     tshirtPrint.style.display = 'none';
-    printEditControls.style.display = 'none';
+    printEditCard.style.display = 'none';
   } else {
     const selectedOpt = printSelect.options[printSelect.selectedIndex];
     let printImg = selectedOpt.getAttribute('data-print-img') || '';
     tshirtPrint.src = printImg;
     tshirtPrint.style.display = 'block';
-    printEditControls.style.display = 'flex';
-    printScaleSlider.value = 1;
-    printRotationSlider.value = 0;
-    tshirtPrint.style.left = '0px';
-    tshirtPrint.style.top = '0px';
-    updatePrintTransform();
   }
 }
 
@@ -203,6 +220,8 @@ function updatePrintTransform() {
   let scale = parseFloat(printScaleSlider.value);
   let rotation = parseFloat(printRotationSlider.value);
   tshirtPrint.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+  printScaleVal.textContent = scale;
+  printRotationVal.textContent = rotation;
 }
 
 function validateQuantity() {
@@ -258,26 +277,24 @@ quantityInput.addEventListener('input', validateQuantity);
 printScaleSlider.addEventListener('input', updatePrintTransform);
 printRotationSlider.addEventListener('input', updatePrintTransform);
 
-window.addEventListener('load', () => {
-  loadCompatiblePrints();
-  loadStock();
-  checkCartQuantities();
+// Переключение режима редактирования принта
+toggleEditBtn.addEventListener('click', () => {
+  if (printEditCard.style.display === 'none' || printEditCard.style.display === '') {
+    printEditCard.style.display = 'block';
+    tshirtPrint.style.cursor = 'move';
+    editMode = true;
+  } else {
+    printEditCard.style.display = 'none';
+    tshirtPrint.style.cursor = 'default';
+    editMode = false;
+  }
 });
 
-function toggleEditMode() {
-  editMode = !editMode;
-  if (editMode) {
-    tshirtPrint.style.border = '2px dashed red';
-    tshirtPrint.style.cursor = 'move';
-  } else {
-    tshirtPrint.style.border = 'none';
-    tshirtPrint.style.cursor = 'default';
-  }
-}
-
-editPrintBtn.addEventListener('click', (e) => {
+// Сброс позиции принта
+resetPositionBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  toggleEditMode();
+  tshirtPrint.style.left = '0px';
+  tshirtPrint.style.top = '0px';
 });
 
 let isDragging = false;
@@ -285,14 +302,14 @@ tshirtPrint.addEventListener('mousedown', (e) => {
   if (!editMode) return;
   isDragging = true;
   const rect = tshirtPrint.getBoundingClientRect();
-  offsetX = e.clientX - rect.left;
-  offsetY = e.clientY - rect.top;
+  dragOffsetX = e.clientX - rect.left;
+  dragOffsetY = e.clientY - rect.top;
 });
 document.addEventListener('mousemove', (e) => {
   if (isDragging && editMode) {
     const containerRect = tshirtContainer.getBoundingClientRect();
-    let left = e.clientX - containerRect.left - offsetX;
-    let top = e.clientY - containerRect.top - offsetY;
+    let left = e.clientX - containerRect.left - dragOffsetX;
+    let top = e.clientY - containerRect.top - dragOffsetY;
     left = Math.max(0, Math.min(left, containerRect.width - tshirtPrint.offsetWidth));
     top = Math.max(0, Math.min(top, containerRect.height - tshirtPrint.offsetHeight));
     tshirtPrint.style.position = 'absolute';
@@ -302,6 +319,22 @@ document.addEventListener('mousemove', (e) => {
 });
 document.addEventListener('mouseup', () => {
   isDragging = false;
+});
+
+// Перед отправкой формы обновляем скрытые поля с параметрами принта
+cartForm.addEventListener('submit', function(e) {
+  if (tshirtPrint.style.display !== 'none') {
+    hiddenPrintScale.value = printScaleSlider.value;
+    hiddenPrintRotation.value = printRotationSlider.value;
+    hiddenPrintOffsetX.value = parseInt(tshirtPrint.style.left) || 0;
+    hiddenPrintOffsetY.value = parseInt(tshirtPrint.style.top) || 0;
+  }
+});
+
+window.addEventListener('load', () => {
+  loadCompatiblePrints();
+  loadStock();
+  checkCartQuantities();
 });
 
 document.querySelectorAll('.remove-item').forEach(btn => {
@@ -316,7 +349,6 @@ document.querySelectorAll('.remove-item').forEach(btn => {
     })
     .then(response => response.json())
     .then(data => {
-      console.log(data);
       location.reload();
     })
     .catch(err => console.error(err));

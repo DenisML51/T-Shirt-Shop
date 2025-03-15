@@ -1,10 +1,11 @@
-from flask import Flask
+import os
 from models.db import db
 from models.models import (
     TShirtModel, Color, Size, Print,
     TShirtCombination, PrintCompatibility
 )
 import config
+from flask import Flask
 
 def init_database():
     app = Flask(__name__)
@@ -55,8 +56,6 @@ def init_database():
         comb8 = TShirtCombination(model_id=model2.id, color_id=color_blue.id,  size_id=size_xl.id, stock=4, combination_image="static/images/vneck_blue.png")
         comb9 = TShirtCombination(model_id=model2.id, color_id=color_red.id,   size_id=size_m.id, stock=6, combination_image="static/images/vneck_red.png")
         
-    
-        
         db.session.add_all([comb1, comb2, comb3, comb4, comb5, comb6, comb7, comb8, comb9])
         db.session.commit()
         
@@ -79,7 +78,7 @@ def init_database():
                     db.session.add(PrintCompatibility(combination_id=comb.id, print_id=pid))
         
         db.session.commit()
-        print("Database initialized with extended data: 3 models, 4 colors, 4 sizes, 7 prints, and print sets based on model and color.")
+        print("Database initialized with sample data.")
 
 if __name__ == '__main__':
     init_database()
