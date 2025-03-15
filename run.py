@@ -9,7 +9,6 @@ def create_app():
     app.config.from_object(config)
     db.init_app(app)
 
-    # Регистрируем Blueprint'ы
     app.register_blueprint(catalog_bp)
     app.register_blueprint(order_bp)
 
@@ -17,10 +16,9 @@ def create_app():
     def index():
         return redirect(url_for('catalog.catalog'))
 
-    # Новый маршрут, который сбрасывает все состояния
     @app.route('/cancel_all', methods=['GET'])
     def cancel_all():
-        session.clear()  # Очищаем все данные сессии (например, корзину и выбранные параметры)
+        session.clear()  
         return redirect(url_for('catalog.catalog'))
 
     return app

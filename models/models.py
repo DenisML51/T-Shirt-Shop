@@ -5,7 +5,6 @@ class TShirtModel(db.Model):
     __tablename__ = 'tshirt_models'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    # Базовое изображение (общий вид)
     base_image = db.Column(db.String(200), nullable=True)
     price = db.Column(db.Float, default=0.0)
 
@@ -36,7 +35,6 @@ class TShirtCombination(db.Model):
     color_id = db.Column(db.Integer, db.ForeignKey('colors.id'), nullable=False)
     size_id = db.Column(db.Integer, db.ForeignKey('sizes.id'), nullable=False)
     stock = db.Column(db.Integer, default=0)
-    # Изображение футболки (цвет/модель)
     combination_image = db.Column(db.String(200), nullable=True)
 
     model = db.relationship('TShirtModel', backref='combinations')
@@ -72,7 +70,6 @@ class OrderItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
     combination_id = db.Column(db.Integer, db.ForeignKey('tshirt_combinations.id'), nullable=False)
-    # Разрешаем отсутствие принта:
     print_id = db.Column(db.Integer, db.ForeignKey('prints.id'), nullable=True)
     quantity = db.Column(db.Integer, default=1)
     price = db.Column(db.Float, default=0.0)

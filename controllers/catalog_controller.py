@@ -11,7 +11,6 @@ def catalog():
     tshirt_models = TShirtModel.query.all()
     colors = Color.query.all()
     sizes = Size.query.all()
-    # Используем все принты для AJAX-подгрузки совместимых вариантов
     prints = Print.query.all()
 
     return render_template(
@@ -66,7 +65,6 @@ def get_stock():
 
 @catalog_bp.route('/remove_from_cart', methods=['POST'])
 def remove_from_cart():
-    # Получаем параметры из запроса
     combination_id = request.form.get('combination_id')
     print_id = request.form.get('print_id', '0')
     final_print_id = print_id if print_id != '0' else None
@@ -74,11 +72,9 @@ def remove_from_cart():
     if 'cart' not in session:
         session['cart'] = []
 
-    # Ищем элемент в корзине и уменьшаем его количество
     for i, item in enumerate(session['cart']):
         if item.get('combination_id') == int(combination_id) and item.get('print_id') == (final_print_id if final_print_id is None else int(final_print_id)):
             item['quantity'] -= 1
-            # Если количество становится 0 или меньше, удаляем элемент
             if item['quantity'] <= 0:
                 session['cart'].pop(i)
             break
@@ -93,10 +89,9 @@ def add_to_cart():
     model_id = request.form.get('model_id')
     color_id = request.form.get('color_id')
     size_id = request.form.get('size_id')
-    print_id = request.form.get('print_id', '0')  # '0' означает "без принта"
+    print_id = request.form.get('print_id', '0') 
     quantity = int(request.form.get('quantity', 1))
 
-    # Находим выбранную комбинацию (модель, цвет, размер)
     combination = TShirtCombination.query.filter_by(
         model_id=model_id,
         color_id=color_id,
@@ -106,7 +101,6 @@ def add_to_cart():
     if not combination:
         return "Данное сочетание не найдено или недоступно.", 400
 
-    # Если выбран новый товар, проверяем, сколько уже добавлено для этой комбинации с выбранным принтом
     final_print_id = print_id if print_id != '0' else None
     existing_quantity = 0
     for item in session['cart']:
@@ -116,7 +110,6 @@ def add_to_cart():
     if total_requested > combination.stock:
         return "Недостаточно товара на складе.", 400
 
-    # Если выбран принт, проверяем его совместимость
     print_name = ""
     print_image = ""
     if final_print_id is not None:
@@ -129,7 +122,6 @@ def add_to_cart():
         print_name = compatibility.print_obj.name
         print_image = compatibility.print_obj.image_url
 
-    # Если товар с такой конфигурацией уже есть в корзине, увеличиваем количество, иначе добавляем новую запись
     found = False
     for item in session['cart']:
         if item.get('combination_id') == combination.id and item.get('print_id') == final_print_id:
@@ -149,7 +141,7 @@ def add_to_cart():
             'price': combination.model.price,
             'image_url': combination.combination_image,
             'print_image': print_image,
-            'availableStock': combination.stock  # Сохраняем начальный остаток для отображения (опционально)
+            'availableStock': combination.stock 
         }
         session['cart'].append(cart_item)
 
@@ -162,7 +154,7 @@ def add_to_cart():
     model_id = request.form.get('model_id')
     color_id = request.form.get('color_id')
     size_id = request.form.get('size_id')
-    print_id = request.form.get('print_id', '0')  # '0' означает "без принта"
+    print_id = request.form.get('print_id', '0') 
     quantity = int(request.form.get('quantity', 1))
 
     combination = TShirtCombination.query.filter_by(
@@ -177,7 +169,6 @@ def add_to_cart():
     if combination.stock < quantity:
         return "Недостаточно товара на складе.", 400
 
-    # Если выбран принт, проверяем его совместимость
     print_name = ""
     print_image = ""
     if print_id != '0':
@@ -190,10 +181,8 @@ def add_to_cart():
         print_name = compatibility.print_obj.name
         print_image = compatibility.print_obj.image_url
 
-    # Если принт не выбран, используем None
     final_print_id = print_id if print_id != '0' else None
 
-    # Проверяем, существует ли уже в корзине товар с такой же комбинацией и принтом
     found = False
     for item in session['cart']:
         if item.get('combination_id') == combination.id and item.get('print_id') == final_print_id:
