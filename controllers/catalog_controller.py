@@ -105,7 +105,6 @@ def add_to_cart():
 
     final_print_id = print_id if print_id != '0' else None
 
-    # Получаем параметры редактирования принта из формы
     try:
         print_scale = round(float(request.form.get('print_scale', 1)), 2)
     except ValueError:

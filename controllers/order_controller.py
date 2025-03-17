@@ -9,7 +9,6 @@ order_bp = Blueprint('order', __name__)
 @order_bp.route('/order', methods=['GET', 'POST'])
 def order():
     if request.method == 'POST':
-        # Ограничение на количество заказов (например, 200)
         if Order.query.count() >= 200:
             flash("Лимит заказов (200) исчерпан.", "danger")
             return redirect(url_for('catalog.catalog'))
