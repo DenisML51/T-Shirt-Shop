@@ -17,7 +17,6 @@ def init_database():
         db.drop_all()
         db.create_all()
 
-        # Пример инициализации данных
         model1 = TShirtModel(name="Classic Tee", base_image="static/images/classic_white.png", price=10.0)
         model2 = TShirtModel(name="V-Neck Tee", base_image="static/images/vneck_white.png", price=12.0)
         

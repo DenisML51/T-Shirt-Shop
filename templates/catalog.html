@@ -273,7 +273,6 @@ quantityInput.addEventListener('input', validateQuantity);
 printScaleSlider.addEventListener('input', updatePrintTransform);
 printRotationSlider.addEventListener('input', updatePrintTransform);
 
-// Переключение режима редактирования принта
 toggleEditBtn.addEventListener('click', () => {
   if (printEditCard.style.display === 'none' || printEditCard.style.display === '') {
     printEditCard.style.display = 'block';
@@ -286,7 +285,6 @@ toggleEditBtn.addEventListener('click', () => {
   }
 });
 
-// Сброс позиции принта
 resetPositionBtn.addEventListener('click', (e) => {
   e.preventDefault();
   tshirtPrint.style.left = '0px';

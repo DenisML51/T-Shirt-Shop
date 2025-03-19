@@ -62,18 +62,15 @@
 
 <script>
   document.getElementById('orderForm').addEventListener('submit', function(e) {
-    // Получаем все поля формы
     const requiredFields = document.querySelectorAll('#orderForm .form-control[required]');
     let valid = true;
 
     requiredFields.forEach(field => {
-      // Если поле пустое, помечаем его как невалидное и запускаем анимацию
       if (!field.value.trim()) {
         valid = false;
         field.classList.add('invalid');
         field.classList.add('shake');
 
-        // После окончания анимации удаляем класс shake
         field.addEventListener('animationend', () => {
           field.classList.remove('shake');
         }, { once: true });
@@ -82,7 +79,6 @@
       }
     });
 
-    // Если хотя бы одно поле не заполнено, отменяем отправку формы
     if (!valid) {
       e.preventDefault();
     }
