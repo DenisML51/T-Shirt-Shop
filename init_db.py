@@ -2,7 +2,8 @@ import os
 from models.db import db
 from models.models import (
     TShirtModel, Color, Size, Print,
-    TShirtCombination, PrintCompatibility
+    TShirtCombination, PrintCompatibility,
+    Order, OrderItem
 )
 import config
 from flask import Flask
@@ -16,6 +17,7 @@ def init_database():
         db.drop_all()
         db.create_all()
 
+        # Пример инициализации данных
         model1 = TShirtModel(name="Classic Tee", base_image="static/images/classic_white.png", price=10.0)
         model2 = TShirtModel(name="V-Neck Tee", base_image="static/images/vneck_white.png", price=12.0)
         
@@ -78,7 +80,7 @@ def init_database():
                     db.session.add(PrintCompatibility(combination_id=comb.id, print_id=pid))
         
         db.session.commit()
-        print("Database initialized with sample data.")
+        print("База данных переинициализирована с начальными данными.")
 
 if __name__ == '__main__':
     init_database()

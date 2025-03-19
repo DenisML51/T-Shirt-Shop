@@ -59,7 +59,29 @@ def order():
         session.modified = True
 
         flash("Заказ оформлен! Скачайте квитанцию.", "success")
-        rendered_html = render_template('order_pdf.html', order=new_order)
+        
+        # Расчет сумм
+        base_total = sum(item.quantity * item.price for item in new_order.items)
+        tax_rate = 0.13
+        tax_amount = base_total * tax_rate
+        grand_total = base_total + tax_amount
+        total_items = sum(item.quantity for item in new_order.items)
+        avg_price = base_total / total_items if total_items > 0 else 0
+        tax_percent = int(tax_rate * 100)
+        # Дополнительная аналитика (например, доля налога от итоговой суммы)
+        tax_share = (tax_amount / grand_total * 100) if grand_total > 0 else 0
+
+        rendered_html = render_template(
+            'order_pdf.html',
+            order=new_order,
+            base_total=base_total,
+            tax_amount=tax_amount,
+            grand_total=grand_total,
+            total_items=total_items,
+            avg_price=avg_price,
+            tax_percent=tax_percent,
+            tax_share=tax_share
+        )
         config_pdf = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
         pdf = pdfkit.from_string(rendered_html, False, configuration=config_pdf)
         response = make_response(pdf)

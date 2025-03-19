@@ -2,62 +2,111 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <title>Заказ {{ order.order_code }}</title>
+    <title>Квитанция Заказа №{{ order.order_code }}</title>
     <style>
       body {
-        font-family: Arial, sans-serif;
-        font-size: 14px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #333;
+        margin: 20px;
+        line-height: 1.6;
       }
-      table {
-        border-collapse: collapse;
-        width: 100%;
-        margin-top: 1rem;
-      }
-      td, th {
-        border: 1px solid #000;
-        padding: 8px;
+      .header, .footer, .section {
+        border: 1px solid #ccc;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 8px;
       }
       .header {
-        margin-bottom: 20px;
+        background-color: #f0f8ff;
+      }
+      .footer {
+        font-size: 12px;
+        text-align: center;
+        color: #555;
+      }
+      .section-title {
+        font-size: 18px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+      }
+      .details {
+        margin: 10px 0;
+      }
+      .line {
+        border-bottom: 1px dashed #aaa;
+        margin: 10px 0;
+      }
+      .calculation {
+        font-size: 16px;
+      }
+      .item {
+        margin-bottom: 8px;
+      }
+      .label {
+        font-weight: bold;
       }
     </style>
 </head>
 <body>
     <div class="header">
-      <h1>Заказ №{{ order.order_code }}</h1>
-      <p><strong>Дата заказа:</strong> {{ order.created_at }}</p>
-      <p><strong>ФИО:</strong> {{ order.customer_name }}</p>
-      <p><strong>Телефон:</strong> {{ order.phone }}</p>
-      <p><strong>Адрес доставки:</strong> {{ order.address }}</p>
-      <p><strong>E-mail:</strong> {{ order.email }}</p>
+        <h1>Квитанция Заказа №{{ order.order_code }}</h1>
+        <p><span class="label">Дата заказа:</span> {{ order.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+        <p><span class="label">Покупатель:</span> {{ order.customer_name }}</p>
+        <p><span class="label">Телефон:</span> {{ order.phone }}</p>
+        <p><span class="label">Адрес доставки:</span> {{ order.address }}</p>
+        <p><span class="label">E-mail:</span> {{ order.email }}</p>
+        {% if order.card_data %}
+          <p><span class="label">Данные карты:</span> {{ order.card_data }}</p>
+        {% endif %}
     </div>
 
-    <h2>Состав заказа</h2>
-    <table>
-        <tr>
-            <th>Модель</th>
-            <th>Цвет</th>
-            <th>Размер</th>
-            <th>Принт</th>
-            <th>Кол-во</th>
-            <th>Цена (шт)</th>
-        </tr>
+    <div class="section">
+        <div class="section-title">Состав заказа</div>
         {% for item in order.items %}
-        <tr>
-            <td>{{ item.combination.model.name }}</td>
-            <td>{{ item.combination.color.name }}</td>
-            <td>{{ item.combination.size.name }}</td>
-            <td>
-                {% if item.print_id %}
-                    {{ item.print_obj.name }}
-                {% else %}
-                    Без принта
-                {% endif %}
-            </td>
-            <td>{{ item.quantity }}</td>
-            <td>{{ item.price }}</td>
-        </tr>
+          <div class="item">
+            <p>
+              <span class="label">Модель:</span> {{ item.combination.model.name }},
+              <span class="label">Цвет:</span> {{ item.combination.color.name }},
+              <span class="label">Размер:</span> {{ item.combination.size.name }}
+            </p>
+            <p>
+              <span class="label">Принт:</span>
+              {% if item.print_id %}
+                {{ item.print_obj.name }}
+              {% else %}
+                Без принта
+              {% endif %}
+            </p>
+            <p>
+              <span class="label">Количество:</span> {{ item.quantity }},
+              <span class="label">Цена (шт.):</span> ${{ "%.2f"|format(item.price) }},
+              <span class="label">Сумма:</span> ${{ "%.2f"|format(item.quantity * item.price) }}
+            </p>
+            <div class="line"></div>
+          </div>
         {% endfor %}
-    </table>
+    </div>
+
+    <div class="section calculation">
+        <div class="section-title">Расчет заказа</div>
+        <p><span class="label">Общее количество товаров:</span> {{ total_items }}</p>
+        <p><span class="label">Сумма без налога:</span> ${{ "%.2f"|format(base_total) }}</p>
+        <p><span class="label">Налог ({{ tax_percent }}%):</span> ${{ "%.2f"|format(tax_amount) }}</p>
+        <p><span class="label">Итоговая сумма:</span> ${{ "%.2f"|format(grand_total) }}</p>
+        <p><span class="label">Средняя цена за товар:</span> ${{ "%.2f"|format(avg_price) }}</p>
+        <p><span class="label">Доля налога от итоговой суммы:</span> {{ "%.2f"|format(tax_share) }}%</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Дополнительная информация</div>
+        <p><span class="label">Контакт для справок:</span> den.rusinov51@gmail.com | +7 (914) 673-90-40</p>
+        <p><span class="label">Адрес магазина:</span> ул. Алеутская, д. 15, Владивосток, Россия</p>
+        <p><span class="label">Примечание:</span> Спасибо за покупку! Надеемся, что вы останетесь довольны качеством наших товаров.</p>
+    </div>
+
+    <div class="footer">
+        <p>© 2025 T-Shirt Shop. Все права защищены.</p>
+    </div>
 </body>
 </html>
